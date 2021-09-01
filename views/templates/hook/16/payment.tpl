@@ -1,0 +1,44 @@
+{*
+ * 2007-2021 PrestaShop
+ *
+ * NOTICE OF LICENSE
+ *
+ * This source file is subject to the Academic Free License (AFL 3.0)
+ * that is bundled with this package in the file LICENSE.txt.
+ * It is also available through the world-wide-web at this URL:
+ * http://opensource.org/licenses/afl-3.0.php
+ * If you did not receive a copy of the license and are unable to
+ * obtain it through the world-wide-web, please send an email
+ * to license@prestashop.com so we can send you a copy immediately.
+ *
+ * DISCLAIMER
+ *
+ * Do not edit or add to this file if you wish to upgrade PrestaShop to newer
+ * versions in the future. If you wish to customize PrestaShop for your
+ * needs please refer to http://www.prestashop.com for more information.
+ *
+ * @author    Soisy
+ * @copyright 2007-2021 Soisy
+ * @license   http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
+ * International Registered Trademark & Property of Soisy
+*}
+<div class="row">
+    <div class="soisy_payment_box col-xs-12">
+        <p class="soisy payment_module">
+            <a href="{$link->getModuleLink('soisy', 'payment')|escape:'html':'UTF-8'}"
+               title="{l s='Pay with Soisy' mod='soisy'}">
+                {l s='Pay with Soisy' mod='soisy'}
+                <span>
+                    {l s='(you will be redirected to soisy.it)' mod='soisy'}
+                </span>
+            </a>
+        </p>
+    </div>
+</div>
+
+<style>
+	.payment_module.soisy a {
+		background: url({$module_dir|escape:'htmlall':'UTF-8'}/logo.png) 35px center no-repeat #fbfbfb;
+		background-size: 40px;
+	}
+</style>

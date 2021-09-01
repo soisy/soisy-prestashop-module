@@ -1,0 +1,764 @@
+<?php
+/**
+ * 2007-2021 PrestaShop
+ *
+ * NOTICE OF LICENSE
+ *
+ * This source file is subject to the Academic Free License (AFL 3.0)
+ * that is bundled with this package in the file LICENSE.txt.
+ * It is also available through the world-wide-web at this URL:
+ * http://opensource.org/licenses/afl-3.0.php
+ * If you did not receive a copy of the license and are unable to
+ * obtain it through the world-wide-web, please send an email
+ * to license@prestashop.com so we can send you a copy immediately.
+ *
+ * DISCLAIMER
+ *
+ * Do not edit or add to this file if you wish to upgrade PrestaShop to newer
+ * versions in the future. If you wish to customize PrestaShop for your
+ * needs please refer to http://www.prestashop.com for more information.
+ *
+ * @author    Soisy
+ * @copyright 2007-2021 Soisy
+ * @license   http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
+ * International Registered Trademark & Property of Soisy
+ */
+
+if (!defined('_PS_VERSION_')) {
+    exit;
+}
+
+require_once(_PS_MODULE_DIR_ . '/soisy/autoload.php');
+
+class Soisy extends PaymentModule
+{
+    const SOISY_LOAN_SIMULATION_CDN = 'https://cdn.soisy.it/loan-quote-widget.js';
+
+    protected $languages;
+    protected $transTabContent = array();
+    protected $apiUrl;
+    protected $shopId;
+    protected $apiKey;
+    public $soisyApi;
+    public $orderStates;
+    public $psVersion;
+    public $sandboxMode;
+
+    /** @var \Context */
+    public $context;
+
+    /** @var SoisyConfiguration */
+    public $soisyConfigurations;
+
+    /** @var Soisy\Plugins\SoisyPlugin\LoanController */
+    public $loanController;
+
+    /** @var SetupProcedure */
+    public $setupProcedure;
+
+    public function __construct()
+    {
+        $this->name = 'soisy';
+        $this->module_key = '2137af924343568029001f1c00825e9f';
+        $this->tab = 'payments_gateways';
+        $this->version = '1.0.2';
+        $this->author = 'Soisy S.p.A';
+        $this->need_instance = 1;
+        $this->allow_push = true;
+
+        /**
+         * Set $this->bootstrap to true if your module is compliant with bootstrap (PrestaShop 1.6)
+         */
+        $this->bootstrap = true;
+
+        parent::__construct();
+
+        $this->displayName = $this->l('Soisy');
+        $this->description = $this->l(
+            'Increase conversions with Soisy installment payments: simple, fast, 100% online.'
+        );
+
+        $this->confirmUninstall = $this->l('Are you sure you want uninstall this module?');
+
+        $this->ps_versions_compliancy = array('min' => '1.6', 'max' => _PS_VERSION_);
+
+        $this->languages = Language::getLanguages(true);
+
+        $this->transTabContent = array(
+            'Name' => $this->l('Name'),
+            'Value' => $this->l('Value'),
+        );
+
+        $this->psVersion = (int)Tools::substr(str_replace('.', '', _PS_VERSION_), 0, 2);
+
+        $this->orderStates = array(
+            SoisyConfiguration::SOISY_ORDER_STATE_LOAN_APPROVED => array(
+                'key' => 'SOISY_ORDER_STATE_LOAN_APPROVED',
+                'name' => $this->l('Soisy: Request in progress'),
+                'color' => '#4169E1',
+                'invoice' => false,
+                'paid' => false,
+            ),
+            /* Temporarily deactivated
+            SoisyConfiguration::SOISY_ORDER_STATE_REQUEST_COMPLETED => array(
+                'key' => 'SOISY_ORDER_STATE_REQUEST_COMPLETED',
+                'name' => $this->l('Soisy: request completed'),
+                'color' => '#FFE36B',
+                'invoice' => false,
+                'paid' => false,
+            ),
+            */
+            SoisyConfiguration::SOISY_ORDER_STATE_LOAN_VERIFIED => array(
+                'key' => 'SOISY_ORDER_STATE_LOAN_VERIFIED',
+                'name' => $this->l('Soisy: Request ready to be credited'),
+                'color' => '#FFE36B',
+                'invoice' => false,
+                'paid' => false,
+            ),
+            SoisyConfiguration::SOISY_ORDER_STATE_LOAN_PAID => array(
+                'key' => 'SOISY_ORDER_STATE_LOAN_PAID',
+                'name' => $this->l('Soisy: Request paid'),
+                'color' => '#32CD32',
+                'invoice' => true,
+                'paid' => true,
+            ),
+            SoisyConfiguration::SOISY_ORDER_STATE_USER_WAS_REJECTED => array(
+                'key' => 'SOISY_ORDER_STATE_USER_WAS_REJECTED',
+                'name' => $this->l('Soisy: Request canceled'),
+                'color' => '#FA3C3C',
+                'invoice' => false,
+                'paid' => false,
+            ),
+        );
+        $this->soisyConfigurations = new SoisyConfiguration($this);
+
+        $this->sandboxMode = !!Configuration::get('SOISY_LIVE_MODE');
+
+        $this->shopId = Configuration::get('SOISY_SHOP_ID');
+        $this->apiKey = Configuration::get('SOISY_API_KEY');
+        $this->apiUrl = $this->sandboxMode
+            ? SoisyConfiguration::SOISY_API_URL_SERVER_PRODUCTION : SoisyConfiguration::SOISY_API_URL_SERVER_SANDBOX;
+
+        $this->soisyApi = new SoisyApi($this->apiUrl, $this->shopId, $this->apiKey);
+
+        $loanRepository = new Soisy\Plugins\SoisyPlugin\Implementations\PrestaShop\PsLoanRepository(
+            $this,
+            $this->context
+        );
+        $shopApi = new Soisy\Plugins\SoisyPlugin\Implementations\PrestaShop\PsShopApi($this, $this->context);
+        $logger = new Soisy\Plugins\SoisyPlugin\Implementations\PrestaShop\PsLogger();
+        $translator = new Soisy\Plugins\SoisyPlugin\Implementations\PrestaShop\PsTranslator($this);
+        $translator->initIt(
+            array(
+                'Cart was already bought' => $this->l('Cart was already bought'),
+                'Found loan without an order' => $this->l('Found loan without an order'),
+                'Unable to cancel shop order' => $this->l('Unable to cancel shop order'),
+                'Unable to create loan' => $this->l('Unable to create loan'),
+                'Unable to create shop order' => $this->l('Unable to create shop order'),
+                'Unable to find loan' => $this->l('Unable to find loan'),
+                'Unable to find order total' => $this->l('Unable to find order total'),
+                'Unable to find related shop order' => $this->l('Unable to find related shop order'),
+                'Unable to save created loan' => $this->l('Unable to save created loan'),
+                'Unable to update loan data from order' => $this->l('Unable to update loan data from order'),
+                'Unable to update loan state' => $this->l('Unable to update loan state'),
+                'Unable to update loan total' => $this->l('Unable to update loan total'),
+                'Unable to update shop order' => $this->l('Unable to update shop order'),
+            )
+        );
+        $this->loanController = new Soisy\Plugins\SoisyPlugin\LoanController();
+        $this->loanController->setLoanRepository($loanRepository);
+        $this->loanController->setShopApi($shopApi);
+        $this->loanController->setLogger($logger);
+        $this->loanController->setTranslator($translator);
+    }
+
+    public function install()
+    {
+        if (extension_loaded('curl') === false) {
+            $this->_errors[] = $this->l('You have to enable the cURL extension on your server to install this module');
+            return false;
+        }
+
+        include(_PS_MODULE_DIR_ . $this->name . '/sql/install.php');
+
+        return
+            parent::install() &&
+            $this->registerHooks() &&
+            $this->initConfigurations() &&
+            $this->installOrderStates();
+    }
+
+    public function uninstall()
+    {
+        include(_PS_MODULE_DIR_ . $this->name . '/sql/uninstall.php');
+
+        return parent::uninstall();
+    }
+
+    protected function registerHooks()
+    {
+        return
+            $this->registerHook('header') &&
+            $this->registerHook('displayHeader') &&
+            $this->registerHook('backOfficeHeader') &&
+            $this->registerHook('paymentOptions') &&
+            $this->registerHook('displayPayment') &&
+            $this->registerHook('displayProductPriceBlock') &&
+            $this->registerHook('displayInternalLoanSimulation');
+    }
+
+    protected function installOrderStates()
+    {
+        foreach ($this->orderStates as $orderStateOptions) {
+            $val = Configuration::get($orderStateOptions['key']);
+            if ($val) {
+                continue;
+            }
+            Configuration::updateValue($orderStateOptions['key'], '');
+
+            $order_state = new OrderState();
+            $order_state->module_name = $this->name;
+            $order_state->name = array(
+                $this->context->language->id => $orderStateOptions['name'],
+            );
+
+            $order_state->send_email = false;
+            $order_state->color = $orderStateOptions['color'];
+            $order_state->hidden = false;
+            $order_state->delivery = false;
+            $order_state->logable = true;
+            $order_state->invoice = $orderStateOptions['invoice'];
+            $order_state->paid = $orderStateOptions['paid'];
+
+            if ($order_state->add()) {
+                Configuration::updateValue($orderStateOptions['key'], (int)$order_state->id);
+                // Custom order state init
+                Configuration::updateValue($orderStateOptions['key'] . '_CUSTOM', (int)$order_state->id);
+
+                if ($this->psVersion > 16) {
+                    $source = $this->local_path . '/logo.gif';
+                    $destination = dirname($this->local_path, 2) . '/img/os/' . (int)$order_state->id . '.gif';
+                    copy($source, $destination);
+                }
+            } else {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    protected function initConfigurations()
+    {
+        Configuration::updateValue('SOISY_LIVE_MODE', false); // Modalità Live/Sandbox
+        Configuration::updateValue('SOISY_LOG_ENABLED', false);
+        Configuration::updateValue('SOISY_WIDGET_ENABLED', false); // Attivazione del widget per anteprima delle rate
+        Configuration::updateValue('SOISY_SHOP_ID', 'partnershop'); // Shop ID
+        Configuration::updateValue('SOISY_API_KEY', 'partnerkey'); // Api Key
+        Configuration::updateValue('SOISY_QUOTE_INSTALMENTS_AMOUNT', 6); // Numero rate simulazione prestito
+        Configuration::updateValue('SOISY_MIN_AMOUNT', 100); // Importo minimo rateizzabile
+        Configuration::updateValue('SOISY_MAX_AMOUNT', 30000);
+        Configuration::updateValue('SOISY_WHITE_LIST', '');
+        Configuration::updateValue('SOISY_ZERO_RATE', false);
+        Configuration::updateValue('SOISY_CUSTOMER_FULL_INFO', false);
+        return true;
+    }
+
+    /**
+     * Load the configuration form
+     */
+    public function getContent()
+    {
+        $html = $this->postProcess();
+        $this->context->smarty->assign('module_dir', $this->_path);
+        $this->context->smarty->assign('soisy_api_key', Configuration::get('SOISY_API_KEY'));
+        $html .= $this->context->smarty->fetch($this->local_path . 'views/templates/admin/configure.tpl');
+        $html .= $this->renderForm();
+        return $html;
+    }
+
+    /**
+     * Create the form that will be displayed in the configuration of your module.
+     */
+    protected function renderForm()
+    {
+        $helper = new HelperForm();
+
+        $helper->show_toolbar = false;
+        $helper->table = $this->table;
+        $helper->module = $this;
+        $helper->default_form_language = $this->context->language->id;
+        $helper->allow_employee_form_lang = Configuration::get('PS_BO_ALLOW_EMPLOYEE_FORM_LANG', 0);
+
+        $helper->identifier = $this->identifier;
+        $helper->submit_action = 'submitSoisyModule';
+        $helper->currentIndex = $this->context->link->getAdminLink('AdminModules', false)
+            . '&configure=' . $this->name . '&tab_module=' . $this->tab . '&module_name=' . $this->name;
+        $helper->token = Tools::getAdminTokenLite('AdminModules');
+
+        $helper->tpl_vars = array(
+            'fields_value' => $this->getConfigFormValues(), // Add values for your inputs
+            'languages' => $this->context->controller->getLanguages(),
+            'id_language' => $this->context->language->id,
+        );
+
+        return $helper->generateForm(
+            array(
+                $this->getConfigForm1(),
+                $this->getConfigForm2(),
+                $this->getConfigForm4()
+            )
+        );
+    }
+
+    protected function getConfigForm1()
+    {
+        return array(
+            'form' => array(
+                'legend' => array(
+                    'title' => $this->l('Authentication Settings'),
+                    'icon' => 'icon-cogs',
+                ),
+                'input' => array(
+                    array(
+                        'type' => 'switch',
+                        'label' => $this->l('Live mode'),
+                        'name' => 'SOISY_LIVE_MODE',
+                        'is_bool' => true,
+                        'required' => true,
+                        'desc' => $this->l(
+                            'Enable the sandbox mode to test the service or live mode to go in production.'
+                        ),
+                        'values' => array(
+                            array(
+                                'id' => 'active_on',
+                                'value' => true,
+                                'label' => $this->l('Enabled'),
+                            ),
+                            array(
+                                'id' => 'active_off',
+                                'value' => false,
+                                'label' => $this->l('Disabled'),
+                            ),
+                        ),
+                    ),
+                    array(
+                        'type' => 'switch',
+                        'label' => $this->l('Enable log'),
+                        'name' => 'SOISY_LOG_ENABLED',
+                        'is_bool' => true,
+                        'required' => true,
+                        'desc' => $this->l('Enable log write.'),
+                        'values' => array(
+                            array(
+                                'id' => 'active_on',
+                                'value' => true,
+                                'label' => $this->l('Enabled'),
+                            ),
+                            array(
+                                'id' => 'active_off',
+                                'value' => false,
+                                'label' => $this->l('Disabled'),
+                            ),
+                        ),
+                    ),
+                    array(
+                        'type' => 'text',
+                        'name' => 'SOISY_SHOP_ID',
+                        'label' => $this->l('Shop ID'),
+                        'desc' => $this->l('Please enter your shop id here'),
+                        'lang' => false,
+                        'required' => true,
+                    ),
+                    array(
+                        'type' => 'text',
+                        'name' => 'SOISY_API_KEY',
+                        'label' => $this->l('API Key'),
+                        'desc' => $this->l('Please enter your API key here'),
+                        'lang' => false,
+                        'required' => true,
+                    ),
+                    array(
+                        'type' => 'switch',
+                        'label' => $this->l('Enable widget'),
+                        'name' => 'SOISY_WIDGET_ENABLED',
+                        'is_bool' => true,
+                        'required' => true,
+                        'desc' => $this->l('Enable the preview widget.'),
+                        'values' => array(
+                            array(
+                                'id' => 'active_on',
+                                'value' => true,
+                                'label' => $this->l('Enabled'),
+                            ),
+                            array(
+                                'id' => 'active_off',
+                                'value' => false,
+                                'label' => $this->l('Disabled'),
+                            ),
+                        ),
+                    ),
+                ),
+                'submit' => array(
+                    'name' => 'submitSoisyModuleConfigForm1',
+                    'title' => $this->l('Save'),
+                ),
+            ),
+        );
+    }
+
+    protected function getConfigForm2()
+    {
+        return array(
+            'form' => array(
+                'legend' => array(
+                    'title' => $this->l('Installment management'),
+                    'icon' => 'icon-cogs',
+                ),
+                'input' => array(
+                    array(
+                        'type' => 'text',
+                        'name' => 'SOISY_MIN_AMOUNT',
+                        'label' => $this->l('Minimum installment amount'),
+                        'desc' => $this->l('Minimum amount that can be paid in installments'),
+                        'lang' => false,
+                        'required' => true,
+                    ),
+                    array(
+                        'type' => 'switch',
+                        'label' => $this->l('Zero Rate'),
+                        'name' => 'SOISY_ZERO_RATE',
+                        'is_bool' => true,
+                        'required' => true,
+                        'desc' => $this->l(
+                            'It enables the acceptance of loans even at zero interest rates.'
+                        ),
+                        'values' => array(
+                            array(
+                                'id' => 'active_on',
+                                'value' => true,
+                                'label' => $this->l('Enabled'),
+                            ),
+                            array(
+                                'id' => 'active_off',
+                                'value' => false,
+                                'label' => $this->l('Disabled'),
+                            ),
+                        ),
+                    ),
+                ),
+                'submit' => array(
+                    'name' => 'submitSoisyModuleConfigForm2',
+                    'title' => $this->l('Save'),
+                ),
+            ),
+        );
+    }
+
+    protected function getConfigForm4()
+    {
+        $inputs = array();
+
+        foreach ($this->orderStates as $custom_order_status) {
+            $inputs[] = array(
+                'type' => 'select',
+                'label' => $custom_order_status['name'],
+                'name' => $custom_order_status['key'] . '_CUSTOM',
+                'multiple' => false,
+                'required' => true,
+                'options' => array(
+                    'query' => OrderState::getOrderStates($this->context->language->id),
+                    'id' => 'id_order_state',
+                    'name' => 'name',
+                ),
+                'desc' => $this->l('Select the order state'),
+                'class' => 'fixed-width-xxl'
+            );
+        }
+
+        $inputs[] = array(
+            'type' => 'bookmark_advanced_settings',
+            'name' => '',
+        );
+
+        return array(
+            'form' => array(
+                'legend' => array(
+                    'title' => $this->l('Advanced settings (click to toggle)'),
+                    'icon' => 'icon-cogs',
+                ),
+                'input' => $inputs,
+                'submit' => array(
+                    'name' => 'submitSoisyModuleConfigForm4',
+                    'title' => $this->l('Save'),
+                ),
+            ),
+        );
+    }
+
+    /**
+     * Set values for the inputs.
+     */
+    protected function getConfigFormValues()
+    {
+        $configurations = array(
+            'SOISY_LIVE_MODE' => Configuration::get('SOISY_LIVE_MODE'),
+            'SOISY_LOG_ENABLED' => Configuration::get('SOISY_LOG_ENABLED'),
+            'SOISY_SHOP_ID' => Configuration::get('SOISY_SHOP_ID'),
+            'SOISY_API_KEY' => Configuration::get('SOISY_API_KEY'),
+            'SOISY_WIDGET_ENABLED' => Configuration::get('SOISY_WIDGET_ENABLED'),
+            'SOISY_MIN_AMOUNT' => Configuration::get('SOISY_MIN_AMOUNT'),
+            'SOISY_ZERO_RATE' => Configuration::get('SOISY_ZERO_RATE'),
+        );
+
+        // Custom order states
+        foreach ($this->orderStates as $custom_order_status) {
+            $configurations[$custom_order_status['key'] . '_CUSTOM'] = Configuration::get(
+                $custom_order_status['key'] . '_CUSTOM'
+            );
+        }
+
+        return $configurations;
+    }
+
+    /**
+     * Save form data.
+     */
+    protected function postProcess()
+    {
+        if (Tools::isSubmit('submitSoisyModuleConfigForm1')) {
+            Configuration::updateValue('SOISY_LIVE_MODE', Tools::getValue('SOISY_LIVE_MODE'));
+            Configuration::updateValue('SOISY_LOG_ENABLED', Tools::getValue('SOISY_LOG_ENABLED'));
+            Configuration::updateValue('SOISY_SHOP_ID', Tools::getValue('SOISY_SHOP_ID'));
+            Configuration::updateValue('SOISY_API_KEY', Tools::getValue('SOISY_API_KEY'));
+            Configuration::updateValue('SOISY_WIDGET_ENABLED', Tools::getValue('SOISY_WIDGET_ENABLED'));
+            return $this->displayConfirmation($this->l('Configuration updated successfully'));
+        } elseif (Tools::isSubmit('submitSoisyModuleConfigForm2')) {
+            $validation_result = $this->validateConfigForm();
+
+            if ($validation_result['status'] === 'error') {
+                return $this->displayError($validation_result['data']);
+            }
+
+            Configuration::updateValue('SOISY_MIN_AMOUNT', Tools::getValue('SOISY_MIN_AMOUNT'));
+            Configuration::updateValue(
+                'SOISY_ZERO_RATE',
+                Tools::getValue('SOISY_ZERO_RATE')
+            );
+            return $this->displayConfirmation($this->l('Configuration updated successfully'));
+        } elseif (Tools::isSubmit('submitSoisyModuleConfigForm4')) {
+            // Custom order states
+            foreach ($this->orderStates as $custom_order_status) {
+                Configuration::updateValue(
+                    $custom_order_status['key'] . '_CUSTOM',
+                    Tools::getValue($custom_order_status['key'] . '_CUSTOM')
+                );
+            }
+            return $this->displayConfirmation($this->l('Configuration updated successfully'));
+        }
+    }
+
+    protected function validateConfigForm()
+    {
+        if (filter_var(Tools::getValue('SOISY_MIN_AMOUNT'), FILTER_VALIDATE_INT) === false) {
+            return array(
+                'status' => 'error',
+                'data' => $this->l('The minimum amount must be an integer'),
+            );
+        }
+        // SOISY_BASIC_QUOTE_INSTALMENTS_AMOUNT between 3 and 60
+        $instalments = Configuration::get('SOISY_QUOTE_INSTALMENTS_AMOUNT');
+        $amount = 100 * Tools::getValue('SOISY_MIN_AMOUNT');
+
+        return $this->soisyApi->loanQuotes($amount, $instalments);
+    }
+
+    /**
+     * Add the CSS & JavaScript files you want to be loaded in the BO.
+     */
+    public function hookBackOfficeHeader()
+    {
+        if (Tools::getValue('module_name') === $this->name || Tools::getValue('configure') === $this->name) {
+            $this->context->controller->addJquery();
+            $this->context->controller->addJS(
+                _PS_MODULE_DIR_ . $this->name . '/views/js/' . $this->psVersion . '/back.js'
+            );
+        }
+    }
+
+    /**
+     * Add the CSS & JavaScript files you want to be added on the FO.
+     */
+    public function hookHeader()
+    {
+        $this->hookDisplayHeader();
+    }
+
+    public function hookDisplayHeader()
+    {
+        if ($this->psVersion > 16) {
+            $this->context->controller->registerJavascript(
+                'soisy_cdn',
+                self::SOISY_LOAN_SIMULATION_CDN,
+                array('server' => 'remote', 'attributes' => 'defer')
+            );
+        } else {
+            $this->smarty->assign('soisyJsUrl', self::SOISY_LOAN_SIMULATION_CDN);
+            return $this->display(__FILE__, 'views/templates/hook/16/soisy_js_import.tpl');
+        }
+    }
+
+    /**
+     * Return payment options available for PS 1.7+
+     *
+     * @param array Hook parameters
+     *
+     * @return array|null
+     */
+    public function hookPaymentOptions($params)
+    {
+        if (!$this->isModuleUsable($params['cart'])) {
+            return;
+        }
+
+        $amount = $params['cart']->getOrderTotal();
+
+        $option = new PrestaShop\PrestaShop\Core\Payment\PaymentOption();
+        $option->setCallToActionText($this->l('Pay in installments with Soisy'))
+            ->setLogo(Media::getMediaPath(_PS_MODULE_DIR_ . $this->name . '/views/img/logo-soisy-min.png'))
+            ->setAction($this->context->link->getModuleLink($this->name, 'redirect', array(), true))
+            ->setInputs(
+                array(
+                    'token' => array('name' => 'token', 'type' => 'hidden', 'value' => '12345689'),
+                )
+            )
+            ->setAdditionalInformation(
+                $this->fetch('module:' . $this->name . '/views/templates/hook/payment_info.tpl')
+                .
+                $this->getCachedLoanSimulation($amount)
+            );
+
+        return array($option);
+    }
+
+    public function hookDisplayPayment($params)
+    {
+        if (!$this->isModuleUsable($params['cart'])) {
+            return;
+        }
+
+        $this->smarty->assign(
+            array(
+                'this_path' => $this->_path,
+                'this_path_ssl' => Tools::getShopDomainSsl(
+                    true,
+                    true
+                ) . __PS_BASE_URI__ . 'modules/' . $this->name . '/',
+            )
+        );
+
+        if ($this->psVersion > 16) {
+            return $this->display(__FILE__, 'views/templates/hook/17/payment.tpl');
+        } else {
+            return $this->display(__FILE__, 'views/templates/hook/16/payment.tpl');
+        }
+    }
+
+    /**
+     * @param Cart        $cart
+     * @param ?float|null $amount
+     * @return bool
+     */
+    public function isModuleUsable($cart, $amount = null)
+    {
+        // Module must be active.
+        if (!$this->active) {
+            return false;
+        }
+
+        // Module must accept current currency.
+        $accepted = false;
+        $currencies_module = $this->getCurrency($cart->id_currency);
+        if (is_array($currencies_module)) {
+            $currency_order = new Currency($cart->id_currency);
+            foreach ($currencies_module as $currency_module) {
+                if ($currency_order->id == $currency_module['id_currency']) {
+                    $accepted = true;
+                    break;
+                }
+            }
+        }
+        if (!$accepted) {
+            return false;
+        }
+
+        // Module can request loans only if inside a strict range.
+        if (is_null($amount)) {
+            $amount = $cart->getOrderTotal();
+        }
+        return $amount >= Configuration::get('SOISY_MIN_AMOUNT') && $amount < Configuration::get('SOISY_MAX_AMOUNT');
+    }
+
+    public function hookDisplayProductPriceBlock($params)
+    {
+        $productId = @$params['product']->id;
+        if ($params['type'] !== 'after_price' or empty($productId)) {
+            return '';
+        }
+
+        $amount = Product::getPriceStatic($productId);
+        if (!$this->isModuleUsable($params['cart'], $amount)) {
+            return '';
+        }
+
+        return $this->getCachedLoanSimulation($amount);
+    }
+
+    public function hookDisplayInternalLoanSimulation($params)
+    {
+        if (!isset($params['cart'])) {
+            return '';
+        }
+        $amount = $params['cart']->getOrderTotal();
+        return $this->getCachedLoanSimulation($amount);
+    }
+
+    public function getCachedLoanSimulation($amount)
+    {
+        $enabled = Configuration::get('SOISY_WIDGET_ENABLED');
+        if (!$enabled) {
+            return '';
+        }
+        $this->smarty->assign(
+            array(
+                'amount' => round($amount, 2),
+                'instalments' => Configuration::get('SOISY_QUOTE_INSTALMENTS_AMOUNT'),
+                'shop_id' => Configuration::get('SOISY_SHOP_ID'),
+            )
+        );
+        if ($this->psVersion > 16) {
+            return $this->fetch('module:' . $this->name . '/views/templates/hook/loan_simulation.tpl');
+        } else {
+            return $this->display(__FILE__, 'views/templates/hook/loan_simulation.tpl');
+        }
+    }
+
+    /**
+     * @param string $template
+     * @param array  $params
+     * @return string
+     */
+    private function render($template, $params = array())
+    {
+        /** @var Twig_Environment $twig */
+        $twig = $this->get('twig');
+
+        return $twig->render($template, $params);
+    }
+
+    // Enables new translation system: https://stackoverflow.com/a/64118133
+    public function isUsingNewTranslationSystem()
+    {
+        return false;
+    }
+}
