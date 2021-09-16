@@ -24,7 +24,7 @@
 *}
 <section id="main">
     <div class="alert alert-warning" role="alert">
-        {$error_message}
+        {$error_message|escape:'htmlall':'UTF-8'}
     </div>
     <p>
         {l s='If there is a problem, please contact us' mod='soisy'}

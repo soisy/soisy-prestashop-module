@@ -26,14 +26,14 @@
 
 $models = scandir(_PS_MODULE_DIR_ . '/soisy/models/');
 foreach ($models as $model) {
-    if ($model !== '.' && $model !== '..' && $model !== 'index.php') {
+    if ($model !== '.' && $model !== '..' && $model !== 'index.php' && substr($model, -4) === '.php') {
         require_once('models/' . $model);
     }
 }
 
 $classes = scandir(_PS_MODULE_DIR_ . '/soisy/classes/');
 foreach ($classes as $class) {
-    if ($class != '.' && $class != '..' && $class != 'index.php') {
+    if ($class != '.' && $class != '..' && $class != 'index.php'  && substr($class, -4) === '.php') {
         require_once('classes/' . $class);
     }
 }
