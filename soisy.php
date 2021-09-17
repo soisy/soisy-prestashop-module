@@ -61,7 +61,7 @@ class Soisy extends PaymentModule
         $this->name = 'soisy';
         $this->module_key = '2137af924343568029001f1c00825e9f';
         $this->tab = 'payments_gateways';
-        $this->version = '1.0.4';
+        $this->version = '1.0.5';
         $this->author = 'Soisy S.p.A';
         $this->need_instance = 1;
         $this->allow_push = true;
@@ -255,9 +255,9 @@ class Soisy extends PaymentModule
         Configuration::updateValue('SOISY_WIDGET_ENABLED', false); // Attivazione del widget per anteprima delle rate
         Configuration::updateValue('SOISY_SHOP_ID', 'partnershop'); // Shop ID
         Configuration::updateValue('SOISY_API_KEY', 'partnerkey'); // Api Key
-        Configuration::updateValue('SOISY_QUOTE_INSTALMENTS_AMOUNT', 6); // Numero rate simulazione prestito
+        Configuration::updateValue('SOISY_QUOTE_INSTALMENTS_AMOUNT', 10); // Numero rate simulazione prestito
         Configuration::updateValue('SOISY_MIN_AMOUNT', 100); // Importo minimo rateizzabile
-        Configuration::updateValue('SOISY_MAX_AMOUNT', 30000);
+        Configuration::updateValue('SOISY_MAX_AMOUNT', 15000);
         Configuration::updateValue('SOISY_WHITE_LIST', '');
         Configuration::updateValue('SOISY_ZERO_RATE', false);
         Configuration::updateValue('SOISY_CUSTOMER_FULL_INFO', false);

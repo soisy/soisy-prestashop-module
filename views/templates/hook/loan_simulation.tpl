@@ -26,6 +26,5 @@
     <soisy-loan-quote
             shop-id="{$shop_id|escape:'htmlall':'UTF-8'}"
             amount="{$amount|escape:'htmlall':'UTF-8'}"
-            instalments="{$instalments|escape:'htmlall':'UTF-8'}"
-            zero-interest-rate="false"></soisy-loan-quote>
+            instalments="{$instalments|escape:'htmlall':'UTF-8'}"></soisy-loan-quote>
 </div>
