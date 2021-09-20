@@ -61,7 +61,7 @@ class Soisy extends PaymentModule
         $this->name = 'soisy';
         $this->module_key = '2137af924343568029001f1c00825e9f';
         $this->tab = 'payments_gateways';
-        $this->version = '1.0.5';
+        $this->version = '1.0.6';
         $this->author = 'Soisy S.p.A';
         $this->need_instance = 1;
         $this->allow_push = true;
@@ -425,6 +425,14 @@ class Soisy extends PaymentModule
                         'required' => true,
                     ),
                     array(
+                        'type' => 'text',
+                        'name' => 'SOISY_QUOTE_INSTALMENTS_AMOUNT',
+                        'label' => $this->l('Instalments number simulated'),
+                        'desc' => $this->l('Instalments number simulated shown in products or cart totals'),
+                        'lang' => false,
+                        'required' => true,
+                    ),
+                    array(
                         'type' => 'switch',
                         'label' => $this->l('Zero Rate'),
                         'name' => 'SOISY_ZERO_RATE',
@@ -508,6 +516,7 @@ class Soisy extends PaymentModule
             'SOISY_API_KEY' => Configuration::get('SOISY_API_KEY'),
             'SOISY_WIDGET_ENABLED' => Configuration::get('SOISY_WIDGET_ENABLED'),
             'SOISY_MIN_AMOUNT' => Configuration::get('SOISY_MIN_AMOUNT'),
+            'SOISY_QUOTE_INSTALMENTS_AMOUNT' => Configuration::get('SOISY_QUOTE_INSTALMENTS_AMOUNT'),
             'SOISY_ZERO_RATE' => Configuration::get('SOISY_ZERO_RATE'),
         );
 
@@ -541,6 +550,7 @@ class Soisy extends PaymentModule
             }
 
             Configuration::updateValue('SOISY_MIN_AMOUNT', Tools::getValue('SOISY_MIN_AMOUNT'));
+            Configuration::updateValue('SOISY_QUOTE_INSTALMENTS_AMOUNT', Tools::getValue('SOISY_QUOTE_INSTALMENTS_AMOUNT'));
             Configuration::updateValue(
                 'SOISY_ZERO_RATE',
                 Tools::getValue('SOISY_ZERO_RATE')
