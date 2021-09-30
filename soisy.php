@@ -730,11 +730,13 @@ class Soisy extends PaymentModule
         if (!$enabled) {
             return '';
         }
+        $widgetShopId = $this->sandboxMode ? 'soisytests' : Configuration::get('SOISY_SHOP_ID');
+
         $this->smarty->assign(
             array(
                 'amount' => round($amount, 2),
                 'instalments' => Configuration::get('SOISY_QUOTE_INSTALMENTS_AMOUNT'),
-                'shop_id' => Configuration::get('SOISY_SHOP_ID'),
+                'shop_id' => $widgetShopId,
                 'zero_interest_rate' => Configuration::get('SOISY_ZERO_INTEREST_RATE'),
             )
         );
