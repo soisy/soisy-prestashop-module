@@ -175,20 +175,6 @@ class PsShopApi implements IShopApi
     /** @param \SoisyApi $api */
     private function createSoisyOrder($api)
     {
-        /*
-        function getLastNumbers($src)
-        {
-            $src = trim($src);
-            $result = '';
-            if (preg_match('/[0-9]+$/', $src)) {
-                for ($i = strlen($src) - 1; $i >= 0 and is_numeric($src[$i]); --$i) {
-                    $result = $src[$i] . $result;
-                }
-            }
-            return $result;
-        }
-        */
-
         $ctx = \Context::getContext();
 
         $amount = $ctx->cart->getOrderTotal();
@@ -204,25 +190,13 @@ class PsShopApi implements IShopApi
         $firstname = $ctx->customer->firstname;
         $lastname = $ctx->customer->lastname;
         $amountInCents = (int)($ctx->cart->getOrderTotal() * 100);
-        $instalments = \Configuration::get('SOISY_QUOTE_INSTALMENTS_AMOUNT');
 
         $vatId = '';
         $vatCountry = '';
-
-        /* Temporarily deactivated
-        $fiscalCode = $invoiceAddress->dni;
-        $mobilePhone = $invoiceAddress->phone or $invoiceAddress->phone_mobile;
-        $city = $invoiceAddress->city;
-        $province = $state->iso_code;
-        $address = trim(preg_replace('/[^a-zA-ZàèéìòùÀÈÉÌÒÙ ]+/', '', $invoiceAddress->address1));
-
-        $civicNumber = getLastNumbers($invoiceAddress->address1);
-        $postalCode = $invoiceAddress->postcode;
-        */
         $fiscalCode = $mobilePhone = $city = $province = $address = $civicNumber = $postalCode = ''; // To Avoid Exception from Soisy WS
 
         $zeroInterestRate = 'false';
-        $zeroInterestRateConfig = \Configuration::get('SOISY_ZERO_RATE');
+        $zeroInterestRateConfig = \Configuration::get('SOISY_ZERO_INTEREST_RATE');
         if (isset($zeroInterestRateConfig) && $zeroInterestRateConfig) {
             $zeroInterestRate = 'true';
         }
@@ -251,7 +225,6 @@ class PsShopApi implements IShopApi
             $firstname,
             $lastname,
             $amountInCents,
-            $instalments,
             $vatId,
             $vatCountry,
             $fiscalCode,

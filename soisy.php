@@ -61,7 +61,7 @@ class Soisy extends PaymentModule
         $this->name = 'soisy';
         $this->module_key = '2137af924343568029001f1c00825e9f';
         $this->tab = 'payments_gateways';
-        $this->version = '1.0.6';
+        $this->version = '1.1.0';
         $this->author = 'Soisy S.p.A';
         $this->need_instance = 1;
         $this->allow_push = true;
@@ -99,15 +99,6 @@ class Soisy extends PaymentModule
                 'invoice' => false,
                 'paid' => false,
             ),
-            /* Temporarily deactivated
-            SoisyConfiguration::SOISY_ORDER_STATE_REQUEST_COMPLETED => array(
-                'key' => 'SOISY_ORDER_STATE_REQUEST_COMPLETED',
-                'name' => $this->l('Soisy: request completed'),
-                'color' => '#FFE36B',
-                'invoice' => false,
-                'paid' => false,
-            ),
-            */
             SoisyConfiguration::SOISY_ORDER_STATE_LOAN_VERIFIED => array(
                 'key' => 'SOISY_ORDER_STATE_LOAN_VERIFIED',
                 'name' => $this->l('Soisy: Request ready to be credited'),
@@ -259,7 +250,7 @@ class Soisy extends PaymentModule
         Configuration::updateValue('SOISY_MIN_AMOUNT', 100); // Importo minimo rateizzabile
         Configuration::updateValue('SOISY_MAX_AMOUNT', 15000);
         Configuration::updateValue('SOISY_WHITE_LIST', '');
-        Configuration::updateValue('SOISY_ZERO_RATE', false);
+        Configuration::updateValue('SOISY_ZERO_INTEREST_RATE', false);
         Configuration::updateValue('SOISY_CUSTOMER_FULL_INFO', false);
         return true;
     }
@@ -434,8 +425,8 @@ class Soisy extends PaymentModule
                     ),
                     array(
                         'type' => 'switch',
-                        'label' => $this->l('Zero Rate'),
-                        'name' => 'SOISY_ZERO_RATE',
+                        'label' => $this->l('Zero Interest Rate'),
+                        'name' => 'SOISY_ZERO_INTEREST_RATE',
                         'is_bool' => true,
                         'required' => true,
                         'desc' => $this->l(
@@ -517,7 +508,7 @@ class Soisy extends PaymentModule
             'SOISY_WIDGET_ENABLED' => Configuration::get('SOISY_WIDGET_ENABLED'),
             'SOISY_MIN_AMOUNT' => Configuration::get('SOISY_MIN_AMOUNT'),
             'SOISY_QUOTE_INSTALMENTS_AMOUNT' => Configuration::get('SOISY_QUOTE_INSTALMENTS_AMOUNT'),
-            'SOISY_ZERO_RATE' => Configuration::get('SOISY_ZERO_RATE'),
+            'SOISY_ZERO_INTEREST_RATE' => Configuration::get('SOISY_ZERO_INTEREST_RATE'),
         );
 
         // Custom order states
@@ -552,8 +543,8 @@ class Soisy extends PaymentModule
             Configuration::updateValue('SOISY_MIN_AMOUNT', Tools::getValue('SOISY_MIN_AMOUNT'));
             Configuration::updateValue('SOISY_QUOTE_INSTALMENTS_AMOUNT', Tools::getValue('SOISY_QUOTE_INSTALMENTS_AMOUNT'));
             Configuration::updateValue(
-                'SOISY_ZERO_RATE',
-                Tools::getValue('SOISY_ZERO_RATE')
+                'SOISY_ZERO_INTEREST_RATE',
+                Tools::getValue('SOISY_ZERO_INTEREST_RATE')
             );
             return $this->displayConfirmation($this->l('Configuration updated successfully'));
         } elseif (Tools::isSubmit('submitSoisyModuleConfigForm4')) {
@@ -744,6 +735,7 @@ class Soisy extends PaymentModule
                 'amount' => round($amount, 2),
                 'instalments' => Configuration::get('SOISY_QUOTE_INSTALMENTS_AMOUNT'),
                 'shop_id' => Configuration::get('SOISY_SHOP_ID'),
+                'zero_interest_rate' => Configuration::get('SOISY_ZERO_INTEREST_RATE'),
             )
         );
         if ($this->psVersion > 16) {
