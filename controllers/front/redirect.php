@@ -55,8 +55,10 @@ class SoisyredirectModuleFrontController extends ModuleFrontController
             Tools::redirect($redirectUrl);
         } catch (LoanControllerException $e) {
             $context->smarty->assign('error_message', $e->getMessage());
+            SoisyUtility::doLog($e->getMessage());
         } catch (Exception $e) {
             $context->smarty->assign('error_message', 'Error occurred');
+            SoisyUtility::doLog($e->getMessage());
         }
 
         if ($this->module->psVersion > 16) {
