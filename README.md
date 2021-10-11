@@ -19,6 +19,7 @@ You have a bunch of useful commands inside the `bin/` directory:
 ## First installation
 
 Just run `$ bin/up` and you should be fine.
+You can also run `$ bin/build` first and `$ bin/up` after if you want to do a clean build of your containers.
 
 ## Local Prestashop Front URL
 
