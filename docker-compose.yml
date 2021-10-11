@@ -1,0 +1,41 @@
+version: "3.8"
+
+networks:
+  soisy-prestashop-net: ~
+
+services:
+  soisy-prestashop-db:
+    networks:
+      - soisy-prestashop-net
+    image: mysql:5.7
+    environment:
+      - MYSQL_ROOT_PASSWORD=admin
+    ports:
+      - "3307:3306"
+
+  soisy-prestashop-app:
+    networks:
+      - soisy-prestashop-net
+    volumes:
+      - ./src:/var/www/html/modules/soisy
+    build:
+      dockerfile: .docker/Dockerfile
+      context: .
+      args:
+        - USER_ID=${USER_ID:-1000}
+        - GROUP_ID=${GROUP_ID:-1000}
+    environment:
+      - MYSQL_ROOT_PASSWORD=admin
+      - DB_SERVER=soisy-prestashop-db
+      - PS_DOMAIN=localhost:8282
+      - PS_FOLDER_INSTALL=install-dev
+      - PS_FOLDER_ADMIN=admin-dev
+      - PS_ERASE_DB=1
+      - PS_INSTALL_DB=1
+      - PS_INSTALL_AUTO=1
+    links:
+      - soisy-prestashop-db  
+    ports:
+      - "8282:80"
+    depends_on:
+      - soisy-prestashop-db

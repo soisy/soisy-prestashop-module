@@ -24,12 +24,17 @@
  * International Registered Trademark & Property of Soisy
  */
 
-header('Expires: Mon, 26 Jul 1997 05:00:00 GMT');
-header('Last-Modified: ' . gmdate('D, d M Y H:i:s') . ' GMT');
-
-header('Cache-Control: no-store, no-cache, must-revalidate');
-header('Cache-Control: post-check=0, pre-check=0', false);
-header('Pragma: no-cache');
-
-header('Location: ../');
-exit;
+require_once 'Models/LoanCreationModel.php';
+require_once 'Models/LoanModel.php';
+require_once 'Models/OrderCreationModel.php';
+require_once 'Exceptions/LoanControllerException.php';
+require_once 'Interfaces/ILoanRepository.php';
+require_once 'Interfaces/ILogger.php';
+require_once 'Interfaces/IShopApi.php';
+require_once 'Interfaces/IShopOrder.php';
+require_once 'Interfaces/ITranslator.php';
+require_once 'Implementations/prestashop/PsLoanRepository.php';
+require_once 'Implementations/prestashop/PsLogger.php';
+require_once 'Implementations/prestashop/PsShopApi.php';
+require_once 'Implementations/prestashop/PsTranslator.php';
+require_once 'LoanController.php';
