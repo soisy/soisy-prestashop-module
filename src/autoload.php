@@ -24,17 +24,18 @@
  * International Registered Trademark & Property of Soisy
  */
 
-require_once 'Models/LoanCreationModel.php';
-require_once 'Models/LoanModel.php';
-require_once 'Models/OrderCreationModel.php';
-require_once 'Exceptions/LoanControllerException.php';
-require_once 'Interfaces/ILoanRepository.php';
-require_once 'Interfaces/ILogger.php';
-require_once 'Interfaces/IShopApi.php';
-require_once 'Interfaces/IShopOrder.php';
-require_once 'Interfaces/ITranslator.php';
-require_once 'Implementations/prestashop/PsLoanRepository.php';
-require_once 'Implementations/prestashop/PsLogger.php';
-require_once 'Implementations/prestashop/PsShopApi.php';
-require_once 'Implementations/prestashop/PsTranslator.php';
-require_once 'LoanController.php';
+$models = scandir(_PS_MODULE_DIR_ . '/soisy/models/');
+foreach ($models as $model) {
+    if ($model !== '.' && $model !== '..' && $model !== 'index.php' && substr($model, -4) === '.php') {
+        require_once('models/' . $model);
+    }
+}
+
+$classes = scandir(_PS_MODULE_DIR_ . '/soisy/classes/');
+foreach ($classes as $class) {
+    if ($class != '.' && $class != '..' && $class != 'index.php'  && substr($class, -4) === '.php') {
+        require_once('classes/' . $class);
+    }
+}
+
+require_once('src/autoload.php');

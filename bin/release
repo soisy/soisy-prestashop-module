@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+
+echo "Creating module zip file for Prestashop Addons release..."
+
+cp -r src/ soisy/
+zip -r soisy.zip soisy/
+zip --delete soisy.zip "._" &> /dev/null
+zip --delete soisy.zip "__MACOSX/*" &> /dev/null
+rm -rf soisy/
+
+echo "Completed!"
