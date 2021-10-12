@@ -30,11 +30,6 @@ services:
       - PS_DOMAIN=localhost:8282
       - PS_FOLDER_INSTALL=install-dev
       - PS_FOLDER_ADMIN=admin-dev
-      - PS_ERASE_DB=1
-      - PS_INSTALL_DB=1
-      - PS_INSTALL_AUTO=1
-    links:
-      - soisy-prestashop-db  
     ports:
       - "8282:80"
     depends_on:

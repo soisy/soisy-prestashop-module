@@ -8,8 +8,6 @@ ARG USER_ID
 RUN groupmod -g $GROUP_ID www-data \
   && usermod -u $USER_ID -g $GROUP_ID www-data
 
-COPY .docker/install_ps.sh /tmp/install_ps.sh
-
 # Permissions
 RUN mkdir -p /var/www/.npm
 RUN mkdir -p /var/www/.composer
@@ -30,5 +28,3 @@ RUN apt install -y nodejs
 
 RUN runuser -g www-data -u www-data -- /usr/local/bin/composer install --no-interaction
 RUN runuser -g www-data -u www-data -- /usr/bin/make assets
-
-ENTRYPOINT [ "/tmp/install_ps.sh" ]
