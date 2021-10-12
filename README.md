@@ -26,7 +26,7 @@ You can also run `$ bin/build` first and `$ bin/up` after if you want to do a cl
 You can then visit `http://localhost:8282` to see your local Prestashop up and running.
 
 
-## Local Prestashop Admi URL
+## Local Prestashop Admin URL
 You can then visit `http://localhost:8282/admin-dev` and login with the following credentials:
 ```
 Username/Email: demo@prestashop.com
