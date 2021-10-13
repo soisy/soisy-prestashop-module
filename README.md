@@ -21,6 +21,8 @@ You have a bunch of useful commands inside the `bin/` directory:
 Just run `$ bin/up` and you should be fine.
 You can also run `$ bin/build` first and `$ bin/up` after if you want to do a clean build of your containers.
 
+After a couple of minutes you may see it working on your browser. Please be patient.
+
 ## Local Prestashop Front URL
 
 You can then visit `http://localhost:8282` to see your local Prestashop up and running.
