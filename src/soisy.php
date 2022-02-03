@@ -1,6 +1,6 @@
 <?php
 /**
- * 2007-2021 PrestaShop
+ * 2007-2022 PrestaShop
  *
  * NOTICE OF LICENSE
  *
@@ -19,7 +19,7 @@
  * needs please refer to http://www.prestashop.com for more information.
  *
  * @author    Soisy
- * @copyright 2007-2021 Soisy
+ * @copyright 2007-2022 Soisy
  * @license   http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
  * International Registered Trademark & Property of Soisy
  */
@@ -42,6 +42,7 @@ class Soisy extends PaymentModule
     public $soisyApi;
     public $orderStates;
     public $psVersion;
+    public $psSpecificVersion;
     public $sandboxMode;
 
     /** @var \Context */
@@ -61,7 +62,7 @@ class Soisy extends PaymentModule
         $this->name = 'soisy';
         $this->module_key = '2137af924343568029001f1c00825e9f';
         $this->tab = 'payments_gateways';
-        $this->version = '1.1.1';
+        $this->version = '1.1.3';
         $this->author = 'Soisy S.p.A';
         $this->need_instance = 1;
         $this->allow_push = true;
@@ -75,7 +76,7 @@ class Soisy extends PaymentModule
 
         $this->displayName = $this->l('Soisy');
         $this->description = $this->l(
-            'Increase conversions with Soisy installment payments: simple, fast, 100% online.'
+            'Aumenta le conversioni con i pagamenti rateali Soisy: semplici, veloci, 100% online.'
         );
 
         $this->confirmUninstall = $this->l('Are you sure you want uninstall this module?');
@@ -90,6 +91,7 @@ class Soisy extends PaymentModule
         );
 
         $this->psVersion = (int)Tools::substr(str_replace('.', '', _PS_VERSION_), 0, 2);
+        $this->psSpecificVersion = (int)Tools::substr(str_replace('.', '', _PS_VERSION_), 0, 4);
 
         $this->orderStates = array(
             SoisyConfiguration::SOISY_ORDER_STATE_LOAN_APPROVED => array(
@@ -243,8 +245,8 @@ class Soisy extends PaymentModule
     {
         Configuration::updateValue('SOISY_LIVE_MODE', false); // Modalità Live/Sandbox
         Configuration::updateValue('SOISY_LOG_ENABLED', false);
-        Configuration::updateValue('SOISY_WIDGET_ENABLED', false); // Attivazione del widget per anteprima delle rate
-        Configuration::updateValue('SOISY_SHOP_ID', 'partnershop'); // Shop ID
+        Configuration::updateValue('SOISY_WIDGET_ENABLED', true); // Attivazione del widget per anteprima delle rate
+        Configuration::updateValue('SOISY_SHOP_ID', 'partnershop'); // Shop ID, questo ID funziona solo per il pagamento e non mostra il Widget. Usare soisytests per il widget
         Configuration::updateValue('SOISY_API_KEY', 'partnerkey'); // Api Key
         Configuration::updateValue('SOISY_QUOTE_INSTALMENTS_AMOUNT', 10); // Numero rate simulazione prestito
         Configuration::updateValue('SOISY_MIN_AMOUNT', 100); // Importo minimo rateizzabile
@@ -595,15 +597,46 @@ class Soisy extends PaymentModule
         $this->hookDisplayHeader();
     }
 
+    public function getCurrentControllerName()
+    {
+        $controller_name = $this->context->controller->php_self;
+        if (empty($controller_name)) {
+            $controller_name = Tools::getValue('controller');
+        }
+
+        return $controller_name;
+    }
+
     public function hookDisplayHeader()
     {
+        $controller_name = $this->getCurrentControllerName();
+
+        if ($controller_name == 'product') {
+            Media::addJsDef(
+                array(
+                    'soisy_controller' => $controller_name,
+                    'soisy_ps_version' => $this->psVersion
+                )
+            );
+        }
+
         if ($this->psVersion > 16) {
             $this->context->controller->registerJavascript(
                 'soisy_cdn',
                 self::SOISY_LOAN_SIMULATION_CDN,
                 array('server' => 'remote', 'attributes' => 'defer')
             );
+            if ($this->psSpecificVersion <= 1772) {
+                if ($controller_name == 'product') {
+                    $this->context->controller->registerJavascript(
+                        'modules-soisy-product',
+                        'modules/soisy/views/js/product.js',
+                        array('media' => 'all', 'priority' => 200)
+                    );
+                }
+            }
         } else {
+            $this->context->controller->addJS(($this->_path) . 'views/js/product.js');
             $this->smarty->assign('soisyJsUrl', self::SOISY_LOAN_SIMULATION_CDN);
             return $this->display(__FILE__, 'views/templates/hook/16/soisy_js_import.tpl');
         }
@@ -707,7 +740,12 @@ class Soisy extends PaymentModule
             return '';
         }
 
-        $amount = Product::getPriceStatic($productId);
+        $id_product_attribute = 0;
+        if (isset($params['product']->id_product_attribute)) {
+            $id_product_attribute = $params['product']->id_product_attribute;
+        }
+
+        $amount = Product::getPriceStatic($productId, true, $id_product_attribute, 2);
         if (!$this->isModuleUsable($params['cart'], $amount)) {
             return '';
         }
