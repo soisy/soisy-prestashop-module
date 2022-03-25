@@ -62,7 +62,7 @@ class Soisy extends PaymentModule
         $this->name = 'soisy';
         $this->module_key = '2137af924343568029001f1c00825e9f';
         $this->tab = 'payments_gateways';
-        $this->version = '1.1.3';
+        $this->version = '1.1.4';
         $this->author = 'Soisy S.p.A';
         $this->need_instance = 1;
         $this->allow_push = true;
@@ -246,6 +246,9 @@ class Soisy extends PaymentModule
         Configuration::updateValue('SOISY_LIVE_MODE', false); // Modalità Live/Sandbox
         Configuration::updateValue('SOISY_LOG_ENABLED', false);
         Configuration::updateValue('SOISY_WIDGET_ENABLED', true); // Attivazione del widget per anteprima delle rate
+        /**  Start Ticket 18546 */
+        Configuration::updateValue('SOISY_NO_COLLISION',false); //attivazione no collision zone del widget
+        /**  End Ticket  18546  */
         Configuration::updateValue('SOISY_SHOP_ID', 'partnershop'); // Shop ID, questo ID funziona solo per il pagamento e non mostra il Widget. Usare soisytests per il widget
         Configuration::updateValue('SOISY_API_KEY', 'partnerkey'); // Api Key
         Configuration::updateValue('SOISY_QUOTE_INSTALMENTS_AMOUNT', 10); // Numero rate simulazione prestito
@@ -391,6 +394,28 @@ class Soisy extends PaymentModule
                             ),
                         ),
                     ),
+                    /**  Start Ticket 18546 */
+                    array(
+                        'type' => 'switch',
+                        'label' => $this->l('Enable no collision zone widget'),
+                        'name' => 'SOISY_NO_COLLISION',
+                        'is_bool' => true,
+                        'required' => true,
+                        'desc' => $this->l('Enable the flag if your widget collides with any product or price descriptions.'),
+                        'values' => array(
+                            array(
+                                'id' => 'active_on',
+                                'value' => true,
+                                'label' => $this->l('Enabled'),
+                            ),
+                            array(
+                                'id' => 'active_off',
+                                'value' => false,
+                                'label' => $this->l('Disabled'),
+                            ),
+                        ),
+                    ),
+                    /**  End Ticket  18546  */
                 ),
                 'submit' => array(
                     'name' => 'submitSoisyModuleConfigForm1',
@@ -508,6 +533,9 @@ class Soisy extends PaymentModule
             'SOISY_SHOP_ID' => Configuration::get('SOISY_SHOP_ID'),
             'SOISY_API_KEY' => Configuration::get('SOISY_API_KEY'),
             'SOISY_WIDGET_ENABLED' => Configuration::get('SOISY_WIDGET_ENABLED'),
+            /**  Start Ticket 18546 */
+            'SOISY_NO_COLLISION' => Configuration::get('SOISY_NO_COLLISION'),
+            /**  End Ticket  18546  */
             'SOISY_MIN_AMOUNT' => Configuration::get('SOISY_MIN_AMOUNT'),
             'SOISY_QUOTE_INSTALMENTS_AMOUNT' => Configuration::get('SOISY_QUOTE_INSTALMENTS_AMOUNT'),
             'SOISY_ZERO_INTEREST_RATE' => Configuration::get('SOISY_ZERO_INTEREST_RATE'),
@@ -534,6 +562,9 @@ class Soisy extends PaymentModule
             Configuration::updateValue('SOISY_SHOP_ID', Tools::getValue('SOISY_SHOP_ID'));
             Configuration::updateValue('SOISY_API_KEY', Tools::getValue('SOISY_API_KEY'));
             Configuration::updateValue('SOISY_WIDGET_ENABLED', Tools::getValue('SOISY_WIDGET_ENABLED'));
+            /**  Start Ticket 18546 */
+            Configuration::updateValue('SOISY_NO_COLLISION', Tools::getValue('SOISY_NO_COLLISION'));
+            /**  End Ticket  18546  */
             return $this->displayConfirmation($this->l('Configuration updated successfully'));
         } elseif (Tools::isSubmit('submitSoisyModuleConfigForm2')) {
             $validation_result = $this->validateConfigForm();
@@ -615,9 +646,15 @@ class Soisy extends PaymentModule
             Media::addJsDef(
                 array(
                     'soisy_controller' => $controller_name,
-                    'soisy_ps_version' => $this->psVersion
+                    'soisy_ps_version' => $this->psVersion,
                 )
             );
+            /**  Start Ticket 18546 */
+            $enabled = Configuration::get('SOISY_NO_COLLISION');
+            if($enabled){
+                $this->context->controller->addCSS($this->_path.'views/css/product.css');
+            }
+            /**  End Ticket  18546  */
         }
 
         if ($this->psVersion > 16) {
