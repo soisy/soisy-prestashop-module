@@ -163,7 +163,7 @@ class PsShopApi implements IShopApi
             if (!\Validate::isLoadedObject($order)) {
                 return null;
             }
-            return (float)$order->total_paid_real;
+            return (float)$order->total_paid;
         } catch (Exception $e) {
             return null;
         }

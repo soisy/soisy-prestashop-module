@@ -103,8 +103,8 @@ class SoisycallbackModuleFrontController extends ModuleFrontController
             case 'LoanWasDisbursed':
                 try {
                     $amoutInCents = (int)Tools::getValue('amount');
-                    $untrimmedAmount = $amoutInCents / 100.0;
-                    $amount = (float)number_format($untrimmedAmount, 2, '.', '');
+                    $untrimmedAmount = (float)($amoutInCents / 100);
+                    $amount = Tools::ps_round($untrimmedAmount, 2);
                     $this->module->loanController->paidLoan($orderToken, $amount, $log);
                     echo 'ok';
                 } catch (LoanControllerException $e) {
