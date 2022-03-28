@@ -1,6 +1,4 @@
-/**  Start Ticket 18546 */
 .soisy-product-loan-wrapper {
-    clear: both;
-    width: 100%;
+    clear: both!important;
+    width: 100%!important;
 }
-/**  End Ticket  18546  */
