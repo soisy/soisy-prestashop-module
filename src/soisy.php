@@ -62,7 +62,7 @@ class Soisy extends PaymentModule
         $this->name = 'soisy';
         $this->module_key = '2137af924343568029001f1c00825e9f';
         $this->tab = 'payments_gateways';
-        $this->version = '1.1.5';
+        $this->version = '1.1.6';
         $this->author = 'Soisy S.p.A';
         $this->need_instance = 1;
         $this->allow_push = true;
