@@ -401,7 +401,7 @@ class Soisy extends PaymentModule
                         'name' => 'SOISY_NO_COLLISION',
                         'is_bool' => true,
                         'required' => true,
-                        'desc' => $this->l('Enable the flag if your widget collides with any product or price descriptions.'),
+                        'desc' => $this->l('Abilitare se il  widget si scontra con qualsiasi descrizione del prodotto o con il prezzo.'),
                         'values' => array(
                             array(
                                 'id' => 'active_on',
@@ -456,9 +456,7 @@ class Soisy extends PaymentModule
                         'name' => 'SOISY_ZERO_INTEREST_RATE',
                         'is_bool' => true,
                         'required' => true,
-                        'desc' => $this->l(
-                            'It enables the acceptance of loans even at zero interest rates.'
-                        ),
+                        'desc' => $this->l('Consente l accettazione di prestiti anche a tasso zero.'),
                         'values' => array(
                             array(
                                 'id' => 'active_on',
