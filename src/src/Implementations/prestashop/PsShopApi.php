@@ -38,9 +38,9 @@ class PsShopApi implements IShopApi
     {
         $savedContext = json_decode($loanModel->getContext());
         if ($this->module->psVersion > 16) {
-            $orderId = \Order::getIdByCartId($savedContext->cart->id);
+            $orderId = \Order::getIdByCartId($savedContext->id_cart);
         } else {
-            $orderId = \Order::getOrderByCartId($savedContext->cart->id);
+            $orderId = \Order::getOrderByCartId($savedContext->id_cart);
         }
         if ($orderId !== false) {
             return false;
