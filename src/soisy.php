@@ -62,7 +62,7 @@ class Soisy extends PaymentModule
         $this->name = 'soisy';
         $this->module_key = '2137af924343568029001f1c00825e9f';
         $this->tab = 'payments_gateways';
-        $this->version = '1.1.7';
+        $this->version = '1.1.8';
         $this->author = 'Soisy S.p.A';
         $this->need_instance = 1;
         $this->allow_push = true;
@@ -671,7 +671,9 @@ class Soisy extends PaymentModule
                 }
             }
         } else {
-            $this->context->controller->addJS(($this->_path) . 'views/js/product.js');
+            if ($controller_name == 'product') {
+                $this->context->controller->addJS(($this->_path) . 'views/js/product.js');
+            }
             $this->smarty->assign('soisyJsUrl', self::SOISY_LOAN_SIMULATION_CDN);
             return $this->display(__FILE__, 'views/templates/hook/16/soisy_js_import.tpl');
         }
