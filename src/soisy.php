@@ -401,7 +401,7 @@ class Soisy extends PaymentModule
                         'name' => 'SOISY_NO_COLLISION',
                         'is_bool' => true,
                         'required' => true,
-                        'desc' => $this->l('Abilitare se il  widget si scontra con qualsiasi descrizione del prodotto o con il prezzo.'),
+                        'desc' => $this->l('Abilitare se il  widget collide con la descrizione o con il prezzo del prodotto.'),
                         'values' => array(
                             array(
                                 'id' => 'active_on',
