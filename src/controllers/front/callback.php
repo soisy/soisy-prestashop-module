@@ -56,11 +56,12 @@ class SoisycallbackModuleFrontController extends ModuleFrontController
 
         $eventId = Tools::getValue('eventId');
         $orderToken = Tools::getValue('orderToken');
+        $loanTokenSaved = $orderToken;
 
         switch ($eventId) {
             case 'LoanWasApproved':
                 try {
-                    $this->module->loanController->requestPreAuthorized($orderToken, $log);
+                    $this->module->loanController->requestPreAuthorized($orderToken, $log , $loanTokenSaved);
                     echo 'ok';
                 } catch (LoanControllerException $e) {
                     http_response_code(500);
