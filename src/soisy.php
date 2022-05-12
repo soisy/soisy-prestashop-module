@@ -62,7 +62,7 @@ class Soisy extends PaymentModule
         $this->name = 'soisy';
         $this->module_key = '2137af924343568029001f1c00825e9f';
         $this->tab = 'payments_gateways';
-        $this->version = '1.1.8';
+        $this->version = '2.0.0';
         $this->author = 'Soisy S.p.A';
         $this->need_instance = 1;
         $this->allow_push = true;
@@ -194,6 +194,7 @@ class Soisy extends PaymentModule
             $this->registerHook('header') &&
             $this->registerHook('displayHeader') &&
             $this->registerHook('backOfficeHeader') &&
+            $this->registerHook('actionProductDelete') &&
             $this->registerHook('paymentOptions') &&
             $this->registerHook('displayPayment') &&
             $this->registerHook('displayProductPriceBlock') &&
@@ -265,6 +266,8 @@ class Soisy extends PaymentModule
      */
     public function getContent()
     {
+        Media::addJsDef(array('soisy_products_ajax_url' => $this->context->link->getAdminLink('AdminModules',true).'&configure='.$this->name.'&action=load_products'));
+        $this->context->controller->addJS($this->_path . 'views/js/admin.js');
         $html = $this->postProcess();
         $this->context->smarty->assign('module_dir', $this->_path);
         $this->context->smarty->assign('soisy_api_key', Configuration::get('SOISY_API_KEY'));
@@ -302,6 +305,7 @@ class Soisy extends PaymentModule
             array(
                 $this->getConfigForm1(),
                 $this->getConfigForm2(),
+                $this->filterform,
                 $this->getConfigForm4()
             )
         );
@@ -520,6 +524,45 @@ class Soisy extends PaymentModule
         );
     }
 
+    public $filterform;
+
+    protected function getConfigFormFilter()
+    {
+        return array(
+            'form' => array(
+                'legend' => array(
+                    'title' => $this->l('Exclude products/categories'),
+                    'icon' => 'icon-cogs',
+                ),
+                'input' => array(
+                    'products' => array(
+                        'type' => 'text',
+                        'label' => $this->l('Search product'),
+                        'name' => 'products',
+                        'autocomplete' => false,
+                        'class' => 'fixed-width-xxl',
+                        'desc' => ''
+                    ),
+                    'categories' => array(
+                        'type' => 'categories',
+                        'label' => $this->l('Category filter'),
+                        'name' => 'excluded_categories',
+                        'tree' => array(
+                            'use_search' => true,
+                            'id' => 'categoryBox',
+                            'use_checkbox' => true,
+                            'selected_categories' => [],
+                        )
+                    ),
+                ),
+                'submit' => array(
+                    'name' => 'submitSoisyModuleConfigFormFilter',
+                    'title' => $this->l('Save'),
+                ),
+            )
+        );
+    }
+
     /**
      * Set values for the inputs.
      */
@@ -546,6 +589,23 @@ class Soisy extends PaymentModule
             );
         }
 
+        $this->filterform = $this->getConfigFormFilter();
+        // Excluded products
+        $products_html = '';
+        if (Configuration::get('SOISY_PRODUCTS_FILTER')) {
+            $excluded_products = explode(',', Configuration::get('SOISY_PRODUCTS_FILTER'));
+            foreach ($excluded_products as $id_product) {
+                $products_html .= '<li>' . Product::getProductName($id_product) . '
+            <a href="javascript:;" class="del_product"><img src="../img/admin/delete.gif" alt="del_img" /></a>
+            <input type="hidden" name="id_product[]" value="' . $id_product . '" /></li>';
+            }
+        }
+        $this->filterform['form']['input']['products']['desc'] = $this->l('Excluded products:')
+            . '<ul id="curr_products"><span id="empty">' . $this->l('No products excluded') . '</span>' . $products_html . '</ul>';
+
+        // Excluded categories
+        $this->filterform['form']['input']['categories']['tree']['selected_categories'] = explode(',', Configuration::get('SOISY_CATEGORIES_FILTER'));
+
         return $configurations;
     }
 
@@ -554,6 +614,27 @@ class Soisy extends PaymentModule
      */
     protected function postProcess()
     {
+        if (Tools::getValue('action') == 'load_products') {
+            if (!$q = Tools::getValue('q'))
+                die;
+            $excludeIds = Tools::getValue('excludeIds');
+            $sql = 'SELECT p.`id_product`, pl.`name`
+			    FROM `' . _DB_PREFIX_ . 'product` p
+                LEFT JOIN `' . _DB_PREFIX_ . 'product_lang` pl
+                ON p.`id_product` = pl.`id_product`
+			    WHERE pl.`name` LIKE \'%' . pSQL($q) . '%\'
+                AND `id_shop` = ' . (int)Shop::getContextShopID() . '
+                AND `id_lang` = ' . $this->context->language->id;
+
+            if (strlen($excludeIds) > 0)
+                $sql .= ' AND p.`id_product` NOT IN (' . $excludeIds . ')';
+
+            $result = Db::getInstance()->executeS($sql);
+            foreach ($result as $value)
+                echo trim($value['name']) . '|' . (int)($value['id_product']) . "\n";
+            die;
+        }
+
         if (Tools::isSubmit('submitSoisyModuleConfigForm1')) {
             Configuration::updateValue('SOISY_LIVE_MODE', Tools::getValue('SOISY_LIVE_MODE'));
             Configuration::updateValue('SOISY_LOG_ENABLED', Tools::getValue('SOISY_LOG_ENABLED'));
@@ -586,6 +667,32 @@ class Soisy extends PaymentModule
                     Tools::getValue($custom_order_status['key'] . '_CUSTOM')
                 );
             }
+            return $this->displayConfirmation($this->l('Configuration updated successfully'));
+        } elseif (Tools::isSubmit('submitSoisyModuleConfigFormFilter')) {
+            // Excluded products
+            $excluded_products = Tools::getValue('id_product');
+            if (is_array($excluded_products)) {
+                $ids_product = array();
+                foreach ($excluded_products as $id_product)
+                    $ids_product[] = (int)$id_product;
+                Configuration::updateValue('SOISY_PRODUCTS_FILTER', implode(',', $ids_product));
+            } else {
+                Configuration::updateValue('SOISY_PRODUCTS_FILTER', '');
+            }
+            // Excluded categories
+            $excluded_categories = Tools::getValue('excluded_categories');
+            if (is_array($excluded_categories)) {
+                $ids_category = array();
+                foreach ($excluded_categories as $id_category) {
+                    if ($id_category != 0) {
+                        $ids_category[] = (int)$id_category;
+                    }
+                }
+                Configuration::updateValue('SOISY_CATEGORIES_FILTER', implode(',', $ids_category));
+            } else {
+                Configuration::updateValue('SOISY_CATEGORIES_FILTER', '');
+            }
+
             return $this->displayConfirmation($this->l('Configuration updated successfully'));
         }
     }
@@ -679,6 +786,11 @@ class Soisy extends PaymentModule
         }
     }
 
+    public function hookActionProductDelete($params){
+        $this->soisyConfigurations->updateOnDelete($params['id_product']);
+    }
+
+
     /**
      * Return payment options available for PS 1.7+
      *
@@ -689,6 +801,10 @@ class Soisy extends PaymentModule
     public function hookPaymentOptions($params)
     {
         if (!$this->isModuleUsable($params['cart'])) {
+            return;
+        }
+
+        if($this->soisyConfigurations->isExcludedMultiple($params['cart']->getProducts())) {
             return;
         }
 
@@ -715,6 +831,10 @@ class Soisy extends PaymentModule
     public function hookDisplayPayment($params)
     {
         if (!$this->isModuleUsable($params['cart'])) {
+            return;
+        }
+
+        if($this->soisyConfigurations->isExcludedMultiple($params['cart']->getProducts())) {
             return;
         }
 
@@ -773,6 +893,11 @@ class Soisy extends PaymentModule
     public function hookDisplayProductPriceBlock($params)
     {
         $productId = @$params['product']->id;
+
+        if ($this->soisyConfigurations->isExcludedSingle($productId)) {
+            return '';
+        }
+
         if ($params['type'] !== 'after_price' or empty($productId)) {
             return '';
         }

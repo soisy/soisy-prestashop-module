@@ -55,8 +55,11 @@ class PsShopApi implements IShopApi
     }
 
 
-    public function buyCart()
+    public function buyCart($loanTokenSaved)
     {
+        $extra_vars = [
+            'transaction_id' => $loanTokenSaved,
+        ];
         try {
             $psOrderStateId = $this->fromAbstractOrderState2PsOrderState(IShopOrder::REQUEST_PREAUTHORIZED);
             $cartTotal = $this->context->cart->getOrderTotal(true, \Cart::BOTH);
@@ -72,7 +75,7 @@ class PsShopApi implements IShopApi
                 (float)$cartTotal,
                 $this->module->displayName,
                 null,
-                array() /*$mailVars*/,
+                $extra_vars,
                 (int)$this->context->currency->id,
                 false,
                 $this->context->customer->secure_key,

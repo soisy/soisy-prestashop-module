@@ -50,4 +50,54 @@ class SoisyConfiguration
     {
         return Configuration::get($this->module->orderStates[$soisyOrderStateName]['key']);
     }
+
+    public function isProductExcluded($id_product)
+    {
+        if ($excluded_products = Configuration::get('SOISY_PRODUCTS_FILTER')) {
+            $excluded_products_array = explode(',', $excluded_products);
+            return in_array($id_product, $excluded_products_array);
+        }
+
+        return false;
+    }
+
+    public function isCategoryExcluded($id_product)
+    {
+        if ($excluded_categories = Configuration::get('SOISY_CATEGORIES_FILTER')) {
+            $excluded_categories_array = explode(',', $excluded_categories);
+            $lang_id = (int)Configuration::get('PS_LANG_DEFAULT');
+            $product = new Product($id_product, false, $lang_id);
+            return in_array($product->id_category_default, $excluded_categories_array);
+        }
+
+        return false;
+    }
+
+    public function isExcludedSingle($id_product)
+    {
+        if ($this->isProductExcluded($id_product) || $this->isCategoryExcluded($id_product)) {
+            return true;
+        }
+        return false;
+    }
+
+    public function isExcludedMultiple($products)
+    {
+        foreach ($products as $product) {
+            if ($this->isExcludedSingle($product['id_product'])) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public function updateOnDelete($id_product)
+    {
+        if ($this->isProductExcluded($id_product)) {
+            $excluded_products = explode(',', Configuration::get('SOISY_PRODUCTS_FILTER'));
+            $key = array_search($id_product, $excluded_products);
+            unset($excluded_products[$key]);
+            Configuration::updateValue('SOISY_PRODUCTS_FILTER', implode(',', $excluded_products));
+        }
+    }
 }
