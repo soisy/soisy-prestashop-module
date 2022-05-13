@@ -36,7 +36,7 @@ interface IShopApi
     public function loadUnboughtCartFromLoanModel($loanModel);
 
     /** @return OrderCreationModel|null */
-    public function buyCart();
+    public function buyCart($loanTokenSaved);
 
     public function resetCart();
 
