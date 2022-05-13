@@ -531,13 +531,13 @@ class Soisy extends PaymentModule
         return array(
             'form' => array(
                 'legend' => array(
-                    'title' => $this->l('Esclusione dei prodotti o delle categorie'),
+                    'title' => $this->l('Exclude products/categories'),
                     'icon' => 'icon-cogs',
                 ),
                 'input' => array(
                     'products' => array(
                         'type' => 'text',
-                        'label' => $this->l('Escludi questi prodotti'),
+                        'label' => $this->l('Search product'),
                         'name' => 'products',
                         'autocomplete' => false,
                         'class' => 'fixed-width-xxl',
@@ -545,7 +545,7 @@ class Soisy extends PaymentModule
                     ),
                     'categories' => array(
                         'type' => 'categories',
-                        'label' => $this->l('Escludi queste categorie (evidenziare le categorie da escludere)'),
+                        'label' => $this->l('Category filter'),
                         'name' => 'excluded_categories',
                         'tree' => array(
                             'use_search' => true,
