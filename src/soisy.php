@@ -537,7 +537,7 @@ class Soisy extends PaymentModule
                 'input' => array(
                     'products' => array(
                         'type' => 'text',
-                        'label' => $this->l('Search product'),
+                        'label' => $this->l('Escludi questi prodotti'),
                         'name' => 'products',
                         'autocomplete' => false,
                         'class' => 'fixed-width-xxl',
@@ -545,7 +545,7 @@ class Soisy extends PaymentModule
                     ),
                     'categories' => array(
                         'type' => 'categories',
-                        'label' => $this->l('Category filter'),
+                        'label' => $this->l('Escludi queste categorie (evidenziare le categorie da escludere)'),
                         'name' => 'excluded_categories',
                         'tree' => array(
                             'use_search' => true,
