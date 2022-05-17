@@ -63,7 +63,7 @@ class LoanController
      * @param array  $log
      * @throws LoanControllerException
      */
-    public function requestPreAuthorized($loanToken, $log)
+    public function requestPreAuthorized($loanToken, $log, $loanTokenSaved)
     {
         $loan = $this->loanRepository->findLoanByToken($loanToken);
         if (is_null($loan)) {
@@ -75,7 +75,7 @@ class LoanController
             throw new LoanControllerException($this->tr->t('Cart was already bought'));
         }
 
-        $orderCreationModel = $this->shopApi->buyCart();
+        $orderCreationModel = $this->shopApi->buyCart($loanTokenSaved);
         if (is_null($orderCreationModel)) {
             throw new LoanControllerException($this->tr->t('Unable to create shop order'));
         }
