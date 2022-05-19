@@ -62,7 +62,7 @@ class Soisy extends PaymentModule
         $this->name = 'soisy';
         $this->module_key = '2137af924343568029001f1c00825e9f';
         $this->tab = 'payments_gateways';
-        $this->version = '2.0.2';
+        $this->version = '2.0.3';
         $this->author = 'Soisy S.p.A';
         $this->need_instance = 1;
         $this->allow_push = true;
@@ -226,8 +226,6 @@ class Soisy extends PaymentModule
 
             if ($order_state->add()) {
                 Configuration::updateValue($orderStateOptions['key'], (int)$order_state->id);
-                // Custom order state init
-                Configuration::updateValue($orderStateOptions['key'] . '_CUSTOM', (int)$order_state->id);
 
                 if ($this->psVersion > 16) {
                     $source = $this->local_path . '/logo.gif';
@@ -491,7 +489,7 @@ class Soisy extends PaymentModule
             $inputs[] = array(
                 'type' => 'select',
                 'label' => $custom_order_status['name'],
-                'name' => $custom_order_status['key'] . '_CUSTOM',
+                'name' => $custom_order_status['key'],
                 'multiple' => false,
                 'required' => true,
                 'options' => array(
@@ -584,9 +582,7 @@ class Soisy extends PaymentModule
 
         // Custom order states
         foreach ($this->orderStates as $custom_order_status) {
-            $configurations[$custom_order_status['key'] . '_CUSTOM'] = Configuration::get(
-                $custom_order_status['key'] . '_CUSTOM'
-            );
+            $configurations[$custom_order_status['key']] = Configuration::get($custom_order_status['key']);
         }
 
         $this->filterform = $this->getConfigFormFilter();
@@ -643,7 +639,7 @@ class Soisy extends PaymentModule
             Configuration::updateValue('SOISY_WIDGET_ENABLED', Tools::getValue('SOISY_WIDGET_ENABLED'));
             /**  Start Ticket 18546 */
             Configuration::updateValue('SOISY_NO_COLLISION', Tools::getValue('SOISY_NO_COLLISION'));
-            /**  End Ticket  18546  */
+            /**  End Ticket 18546 */
             return $this->displayConfirmation($this->l('Configuration updated successfully'));
         } elseif (Tools::isSubmit('submitSoisyModuleConfigForm2')) {
             $validation_result = $this->validateConfigForm();
@@ -654,18 +650,12 @@ class Soisy extends PaymentModule
 
             Configuration::updateValue('SOISY_MIN_AMOUNT', Tools::getValue('SOISY_MIN_AMOUNT'));
             Configuration::updateValue('SOISY_QUOTE_INSTALMENTS_AMOUNT', Tools::getValue('SOISY_QUOTE_INSTALMENTS_AMOUNT'));
-            Configuration::updateValue(
-                'SOISY_ZERO_INTEREST_RATE',
-                Tools::getValue('SOISY_ZERO_INTEREST_RATE')
-            );
+            Configuration::updateValue('SOISY_ZERO_INTEREST_RATE', Tools::getValue('SOISY_ZERO_INTEREST_RATE'));
             return $this->displayConfirmation($this->l('Configuration updated successfully'));
         } elseif (Tools::isSubmit('submitSoisyModuleConfigForm4')) {
             // Custom order states
             foreach ($this->orderStates as $custom_order_status) {
-                Configuration::updateValue(
-                    $custom_order_status['key'] . '_CUSTOM',
-                    Tools::getValue($custom_order_status['key'] . '_CUSTOM')
-                );
+                Configuration::updateValue($custom_order_status['key'], Tools::getValue($custom_order_status['key']));
             }
             return $this->displayConfirmation($this->l('Configuration updated successfully'));
         } elseif (Tools::isSubmit('submitSoisyModuleConfigFormFilter')) {
