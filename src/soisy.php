@@ -125,12 +125,12 @@ class Soisy extends PaymentModule
         );
         $this->soisyConfigurations = new SoisyConfiguration($this);
 
-        $this->sandboxMode = !!Configuration::get('SOISY_LIVE_MODE');
+        $this->sandboxMode = !Configuration::get('SOISY_LIVE_MODE');
 
         $this->shopId = Configuration::get('SOISY_SHOP_ID');
         $this->apiKey = Configuration::get('SOISY_API_KEY');
         $this->apiUrl = $this->sandboxMode
-            ? SoisyConfiguration::SOISY_API_URL_SERVER_PRODUCTION : SoisyConfiguration::SOISY_API_URL_SERVER_SANDBOX;
+            ? SoisyConfiguration::SOISY_API_URL_SERVER_SANDBOX : SoisyConfiguration::SOISY_API_URL_SERVER_PRODUCTION;
 
         $this->soisyApi = new SoisyApi($this->apiUrl, $this->shopId, $this->apiKey);
 
@@ -920,7 +920,7 @@ class Soisy extends PaymentModule
         if (!$enabled) {
             return '';
         }
-        $widgetShopId = $this->sandboxMode ? 'soisytests' : Configuration::get('SOISY_SHOP_ID');
+        $widgetShopId = $this->sandboxMode ? 'partnershop' : Configuration::get('SOISY_SHOP_ID');
 
         $this->smarty->assign(
             array(
