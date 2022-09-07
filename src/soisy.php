@@ -33,6 +33,7 @@ require_once(_PS_MODULE_DIR_ . '/soisy/autoload.php');
 class Soisy extends PaymentModule
 {
     const SOISY_LOAN_SIMULATION_CDN = 'https://cdn.soisy.it/loan-quote-widget.js';
+    const SOISY_SANDBOX_SHOP_ID = 'partnershop';
 
     protected $languages;
     protected $transTabContent = array();
@@ -127,7 +128,7 @@ class Soisy extends PaymentModule
 
         $this->sandboxMode = !Configuration::get('SOISY_LIVE_MODE');
 
-        $this->shopId = Configuration::get('SOISY_SHOP_ID');
+        $this->shopId = $this->sandboxMode ? self::SOISY_SANDBOX_SHOP_ID : Configuration::get('SOISY_SHOP_ID');
         $this->apiKey = Configuration::get('SOISY_API_KEY');
         $this->apiUrl = $this->sandboxMode
             ? SoisyConfiguration::SOISY_API_URL_SERVER_SANDBOX : SoisyConfiguration::SOISY_API_URL_SERVER_PRODUCTION;
@@ -248,7 +249,7 @@ class Soisy extends PaymentModule
         /**  Start Ticket 18546 */
         Configuration::updateValue('SOISY_NO_COLLISION',false); //attivazione no collision zone del widget
         /**  End Ticket  18546  */
-        Configuration::updateValue('SOISY_SHOP_ID', 'partnershop'); // Shop ID, questo ID funziona solo per il pagamento e non mostra il Widget. Usare soisytests per il widget
+        Configuration::updateValue('SOISY_SHOP_ID', self::SOISY_SANDBOX_SHOP_ID); // Shop ID, questo ID funziona solo per il pagamento e non mostra il Widget. Usare soisytests per il widget
         Configuration::updateValue('SOISY_API_KEY', 'partnerkey'); // Api Key
         Configuration::updateValue('SOISY_QUOTE_INSTALMENTS_AMOUNT', 10); // Numero rate simulazione prestito
         Configuration::updateValue('SOISY_MIN_AMOUNT', 100); // Importo minimo rateizzabile
@@ -920,7 +921,7 @@ class Soisy extends PaymentModule
         if (!$enabled) {
             return '';
         }
-        $widgetShopId = $this->sandboxMode ? 'partnershop' : Configuration::get('SOISY_SHOP_ID');
+        $widgetShopId = $this->sandboxMode ? self::SOISY_SANDBOX_SHOP_ID : Configuration::get('SOISY_SHOP_ID');
 
         $this->smarty->assign(
             array(
