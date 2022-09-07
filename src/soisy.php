@@ -129,7 +129,7 @@ class Soisy extends PaymentModule
         $this->sandboxMode = !Configuration::get('SOISY_LIVE_MODE');
 
         $this->shopId = $this->sandboxMode ? self::SOISY_SANDBOX_SHOP_ID : Configuration::get('SOISY_SHOP_ID');
-        $this->apiKey = Configuration::get('SOISY_API_KEY');
+        $this->apiKey = $this->sandboxMode ? 'partnerkey' : Configuration::get('SOISY_API_KEY');
         $this->apiUrl = $this->sandboxMode
             ? SoisyConfiguration::SOISY_API_URL_SERVER_SANDBOX : SoisyConfiguration::SOISY_API_URL_SERVER_PRODUCTION;
 
