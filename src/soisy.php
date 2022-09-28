@@ -104,7 +104,7 @@ class Soisy extends PaymentModule
             ),
             SoisyConfiguration::SOISY_ORDER_STATE_LOAN_VERIFIED => array(
                 'key' => 'SOISY_ORDER_STATE_LOAN_VERIFIED',
-                'name' => $this->l('Soisy: Request ready to be credited'),
+                'name' => $this->l('Soisy: Request approved'),
                 'color' => '#FFE36B',
                 'invoice' => false,
                 'paid' => false,
